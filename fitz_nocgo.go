@@ -129,6 +129,7 @@ func (f *Document) Image(pageNumber int) (*image.RGBA, error) {
 }
 
 // ImageDPI returns image for given page number and DPI.
+// The image includes annotations and form widgets, as a viewer shows the page.
 func (f *Document) ImageDPI(pageNumber int, dpi float64) (*image.RGBA, error) {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
@@ -166,7 +167,7 @@ func (f *Document) ImageDPI(pageNumber int, dpi float64) (*image.RGBA, error) {
 	fzEnableDeviceHints(f.ctx, device, fzNoCache)
 	defer fzDropDevice(f.ctx, device)
 
-	runPageContents(f.ctx, page, device, fzIdentity)
+	runPage(f.ctx, page, device, fzIdentity)
 
 	fzCloseDevice(f.ctx, device)
 
@@ -532,6 +533,7 @@ var (
 	fzScale                    *bundle
 	fzNewDrawDevice            *bundle
 	fzRunPageContents          *bundle
+	fzRunPage                  *bundle
 	fzNewBufferFromPixmapAsPNG *bundle
 	fzNewStextPage             *bundle
 	fzNewSvgDevice             *bundle
@@ -589,6 +591,7 @@ func init() {
 	fzScale = newBundle("fz_scale", &typeFzMatrix, &ffi.TypeFloat, &ffi.TypeFloat)
 	fzNewDrawDevice = newBundle("fz_new_draw_device", &ffi.TypePointer, &ffi.TypePointer, &typeFzMatrix, &ffi.TypePointer)
 	fzRunPageContents = newBundle("fz_run_page_contents", &ffi.TypeVoid, &ffi.TypePointer, &ffi.TypePointer, &ffi.TypePointer, &typeFzMatrix, &ffi.TypePointer)
+	fzRunPage = newBundle("fz_run_page", &ffi.TypeVoid, &ffi.TypePointer, &ffi.TypePointer, &ffi.TypePointer, &typeFzMatrix, &ffi.TypePointer)
 	fzNewBufferFromPixmapAsPNG = newBundle("fz_new_buffer_from_pixmap_as_png", &ffi.TypePointer, &ffi.TypePointer, &ffi.TypePointer, &typeFzColorParams)
 	fzNewStextPage = newBundle("fz_new_stext_page", &ffi.TypePointer, &ffi.TypePointer, &typeFzRect)
 	fzNewSvgDevice = newBundle("fz_new_svg_device", &ffi.TypePointer, &ffi.TypePointer, &ffi.TypePointer, &ffi.TypeFloat, &ffi.TypeFloat, &ffi.TypeSint32, &ffi.TypeSint32)
@@ -725,6 +728,11 @@ func newDrawDevice(ctx *fzContext, transform fzMatrix, dest *fzPixmap) *fzDevice
 func runPageContents(ctx *fzContext, page *fzPage, dev *fzDevice, transform fzMatrix) {
 	var cookie fzCookie
 	fzRunPageContents.call(nil, unsafe.Pointer(&ctx), unsafe.Pointer(&page), unsafe.Pointer(&dev), unsafe.Pointer(&transform), unsafe.Pointer(&cookie))
+}
+
+func runPage(ctx *fzContext, page *fzPage, dev *fzDevice, transform fzMatrix) {
+	var cookie fzCookie
+	fzRunPage.call(nil, unsafe.Pointer(&ctx), unsafe.Pointer(&page), unsafe.Pointer(&dev), unsafe.Pointer(&transform), unsafe.Pointer(&cookie))
 }
 
 func newBufferFromPixmapAsPNG(ctx *fzContext, pix *fzPixmap, params fzColorParams) *fzBuffer {
