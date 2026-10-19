@@ -152,6 +152,17 @@ int run_page_contents(fz_context *ctx, fz_page *page, fz_device *dev, fz_matrix 
 
 	return 1;
 }
+
+int run_page(fz_context *ctx, fz_page *page, fz_device *dev, fz_matrix transform, fz_cookie *cookie) {
+	fz_try(ctx) {
+		fz_run_page(ctx, page, dev, transform, cookie);
+	}
+	fz_catch(ctx) {
+		return 0;
+	}
+
+	return 1;
+}
 */
 import "C"
 
@@ -313,6 +324,7 @@ func (f *Document) Image(pageNumber int) (*image.RGBA, error) {
 }
 
 // ImageDPI returns image for given page number and DPI.
+// The image includes annotations and form widgets, as a viewer shows the page.
 func (f *Document) ImageDPI(pageNumber int, dpi float64) (*image.RGBA, error) {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
@@ -351,7 +363,7 @@ func (f *Document) ImageDPI(pageNumber int, dpi float64) (*image.RGBA, error) {
 	defer C.fz_drop_device(f.ctx, device)
 
 	drawMatrix := C.fz_identity
-	ret := C.run_page_contents(f.ctx, page, device, drawMatrix, nil)
+	ret := C.run_page(f.ctx, page, device, drawMatrix, nil)
 	if ret == 0 {
 		return nil, ErrRunPageContents
 	}
